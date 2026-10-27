@@ -1,0 +1,122 @@
+
+### **1. `requirements.txt**`
+
+Create a file named `requirements.txt` in the same directory as `foundation_suite_app.py` with the following contents:
+
+```text
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+plotly>=5.15.0
+streamlit>=1.28.0
+
+```
+
+---
+
+### **2. Step-by-Step Execution on Windows**
+
+Follow these steps using **Command Prompt (`cmd`)**, **PowerShell**, or the integrated terminal in **VS Code**:
+
+#### **Step 1: Open Terminal & Navigate to the Project Directory**
+
+Navigate to the folder containing `foundation_suite_app.py`:
+
+```cmd
+cd /d D:\demos_22_July\trainings\week1-8
+
+```
+
+*(Replace the path with your actual project directory).*
+
+---
+
+#### **Step 2: Create an Isolated Python Virtual Environment**
+
+Using a virtual environment avoids library version conflicts:
+
+```cmd
+python -m venv .venv
+
+```
+
+---
+
+#### **Step 3: Activate the Virtual Environment**
+
+* **In Command Prompt (`cmd`):**
+```cmd
+.venv\Scripts\activate.bat
+
+```
+
+
+* **In PowerShell:**
+```powershell
+.\.venv\Scripts\Activate.ps1
+
+```
+
+
+> **Note for PowerShell Execution Policy:** If you encounter a script authorization error (`Execution_Policies`), enable local execution for the current session by running:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+> .\.venv\Scripts\Activate.ps1
+> 
+> ```
+> 
+> 
+
+
+
+Once activated, you will see `(.venv)` displayed at the start of your terminal prompt.
+
+---
+
+#### **Step 4: Upgrade `pip` & Install Dependencies**
+
+```cmd
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+
+```
+
+---
+
+#### **Step 5: Run the Streamlit Application**
+
+Launch the local web portal:
+
+```cmd
+streamlit run foundation_suite_app.py
+
+```
+
+---
+
+#### **Step 6: Open the Dashboard in Your Browser**
+
+Streamlit will automatically open your default browser. If it does not open automatically, visit:
+
+```text
+http://localhost:8501
+
+```
+
+---
+
+### **Useful Operational Commands**
+
+* **To Stop the Server:** Press `Ctrl + C` in your command prompt/terminal window.
+* **To Deactivate the Environment:** Run:
+```cmd
+deactivate
+
+```
+
+
+* **To Run on a Specific Port:**
+```cmd
+streamlit run foundation_suite_app.py --server.port 8502
+
+```

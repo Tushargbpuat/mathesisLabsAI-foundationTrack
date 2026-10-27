@@ -1,0 +1,127 @@
+import numpy as np
+import pandas as pd
+from scipy.spatial.distance import pdist, squareform
+
+# Set random seed for reproducibility
+np.random.seed(42)
+
+# =====================================================================
+# 1. PHYSICAL GRID SETUP & TELEMETRY GENERATION
+# =====================================================================
+# Generate a 5x5 physical spatial grid array (25 sensor nodes across a 10m x 10m bay)
+grid_x, grid_y = np.meshgrid(np.linspace(0, 10, 5), np.linspace(0, 10, 5))
+sensor_coords = np.column_stack([grid_x.ravel(), grid_y.ravel()]) # Shape: (25, 2)
+num_sensors = len(sensor_coords)
+time_steps = 100
+
+# Continuous Non-Linear Thermal Field: T(x, y) = 22.0 + 5*sin(x/3) + 3*cos(y/4)
+base_temp = 22.0
+spatial_field = 5.0 * np.sin(sensor_coords[:, 0] / 3.0) + 3.0 * np.cos(sensor_coords[:, 1] / 4.0)
+
+sensor_telemetry = []
+for t in range(time_steps):
+    temporal_oscillation = 2.0 * np.sin(t / 10.0)      # Global thermodynamic cycle
+    gaussian_noise = np.random.normal(0, 0.5, num_sensors) # Physical sensor channel noise
+    readings = base_temp + spatial_field + temporal_oscillation + gaussian_noise
+    sensor_telemetry.append(readings)
+
+X = np.array(sensor_telemetry) # Data Matrix shape: (100, 25)
+
+# =====================================================================
+# 2. DISTANCE METRIC ENGINE & SVD CALCULATIONS
+# =====================================================================
+dist_euclidean = squareform(pdist(sensor_coords, metric='euclidean'))
+dist_manhattan = squareform(pdist(sensor_coords, metric='cityblock'))
+
+X_mean = np.mean(X, axis=0)
+X_centered = X - X_mean
+U, S, Vt = np.linalg.svd(X_centered, full_matrices=False)
+
+explained_variance = (S ** 2) / np.sum(S ** 2)
+cumulative_variance = np.cumsum(explained_variance)
+numerical_rank = np.linalg.matrix_rank(X_centered)
+
+# =====================================================================
+# 3. PREPARE DATAFRAMES
+# =====================================================================
+sensor_summary = pd.DataFrame({
+    'Sensor_ID': [f"S_{i+1:02d}" for i in range(num_sensors)],
+    'X_Coord (m)': sensor_coords[:, 0],
+    'Y_Coord (m)': sensor_coords[:, 1],
+    'Mean Temp (°C)': X_mean.round(2),
+    'Min Temp (°C)': np.min(X, axis=0).round(2),
+    'Max Temp (°C)': np.max(X, axis=0).round(2),
+    'Std Dev (°C)': np.std(X, axis=0).round(2)
+})
+
+svd_summary = pd.DataFrame({
+    'Component': [f"PC_{i+1:02d}" for i in range(10)],
+    'Singular Value': S[:10].round(4),
+    'Variance Ratio (%)': (explained_variance[:10] * 100).round(2),
+    'Cumulative Var (%)': (cumulative_variance[:10] * 100).round(2)
+})
+
+distance_sample = pd.DataFrame({
+    'Sensor Pair': ['S_01 - S_02', 'S_01 - S_05', 'S_01 - S_25'],
+    'Euclidean Dist (m)': [dist_euclidean[0, 1], dist_euclidean[0, 4], dist_euclidean[0, 24]],
+    'Manhattan Dist (m)': [dist_manhattan[0, 1], dist_manhattan[0, 4], dist_manhattan[0, 24]],
+    'Mean Temp Delta (°C)': [abs(X_mean[0] - X_mean[1]), abs(X_mean[0] - X_mean[4]), abs(X_mean[0] - X_mean[24])]
+})
+
+# =====================================================================
+# 4. PRINT INTEGRATED CONSOLE REPORT
+# =====================================================================
+print("=" * 85)
+print("             MATHESISLABS TELEMETRY PIPELINE INTEGRATED CONSOLE REPORT            ")
+print("=" * 85)
+print(f"Data Matrix Dimensions: {X.shape} (100 Snapshots x 25 Channels) | Full Numerical Rank: {numerical_rank}")
+print("System Context: 5x5 HVAC Physical Sensor Grid logged over 100 continuous temporal snapshots.")
+print("-" * 85)
+
+print("\n[SECTION 1: SENSOR ARRAY TELEMETRY METRICS (SAMPLE - FIRST 10 NODES)]")
+print(sensor_summary.head(10).to_string(index=False))
+
+print("\n--- SECTION 1 EXPLANATION & VALUE RANGES ---")
+print("• Sensor_ID: Hardware node ID (S_01 through S_25).")
+print("• X_Coord / Y_Coord (0.0 to 10.0 meters): Physical layout position on the facility floor.")
+print("• Mean Temp (23.96°C to 30.38°C): Time-averaged thermal state. Heat peaks in the center (S_03 = 30.38°C)")
+print("  and cools towards boundaries (S_05 = 24.47°C), revealing a non-linear thermal gradient.")
+print("• Min / Max Temp (20.99°C to 32.98°C): Operational envelope across observation window.")
+print("• Std Dev (1.29°C to 1.49°C): Thermal fluctuation around the mean. Uniformity across nodes confirms")
+print("  a shared, macro-level thermodynamic process mixed with localized sensor noise.")
+
+print("\n" + "-" * 85)
+print("\n[SECTION 2: SVD SINGULAR VALUES & VARIANCE SPECTRUM]")
+print(svd_summary.to_string(index=False))
+
+print("\n--- SECTION 2 EXPLANATION & INTUITION ---")
+print("• Component: Latent basis vectors (PC_01 to PC_10) produced by Singular Value Decomposition.")
+print("• Singular Value (65.7605 -> 5.1953): Quantifies the 'stiffness' or energy along each axis.")
+print("  Notice the massive drop between PC_01 (65.7605) and PC_02 (7.0594) — an elbow/spectral gap.")
+print("• Variance Ratio (%): Percentage of total physical variance captured by that component.")
+print("  PC_01 accounts for 88.40% of all system dynamics.")
+print("• Cumulative Var (%): PC_01 to PC_10 reach 95.25%.")
+print("• Deep Learning Takeaway: While raw data has 25 dimensions, intrinsic dimension is ~10.")
+print("  The sensor input array can be compressed by 60% before feeding into neural nets or local SLMs.")
+
+print("\n" + "-" * 85)
+print("\n[SECTION 3: PHYSICAL DISTANCE VS. LATENT STATE DELTA]")
+print(distance_sample.round(2).to_string(index=False))
+
+print("\n--- SECTION 3 EXPLANATION & COMPARATIVE ANALYSIS ---")
+print("• Euclidean Dist (L2 Norm): Straight-line spatial distance (sqrt(dx^2 + dy^2)).")
+print("• Manhattan Dist (L1 Norm): Grid-constrained distance (|dx| + |dy|), e.g., cable/conduit routing.")
+print("• Mean Temp Delta (°C): Real thermal state difference (|mean_i - mean_j|).")
+print("\nKey Pair Comparative Insights:")
+print("1. Pair S_01 - S_02 [CLOSE IN SPACE, FAR IN STATE]:")
+print("   Physically adjacent (2.50m apart), but has a steep temperature delta of 3.69°C.")
+print("   S_02 sits near an expanding heat plume while S_01 is in a cold corner.")
+print("2. Pair S_01 - S_05 [FAR IN SPACE, CLOSE IN STATE]:")
+print("   10.00m apart on opposite ends of the room, but temp delta is only 0.90°C.")
+print("   Symmetric boundary conditions create near-identical thermal states despite spatial distance.")
+print("3. Pair S_01 - S_25 [MAX SPACE, MAX STATE DELTA]:")
+print("   Max physical separation (14.14m Euclidean / 20m Manhattan) coinciding with max thermal delta (6.34°C).")
+print("\nSUMMARY FOR INTERNS:")
+print("Never assume sensors are correlated simply because they sit next to each other on a blueprint.")
+print("Machine Learning models must be trained on the state space manifold (Temp Delta), not spatial distance alone.")
+print("=" * 85)
